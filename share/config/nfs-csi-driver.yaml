@@ -1,0 +1,104 @@
+# NFS CSI Driver - Simplified approach
+# This creates a working NFS provisioner for our setup
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nfs-csi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfs-csi-provisioner
+  namespace: nfs-csi
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-csi-provisioner-runner
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-csi-provisioner-runner
+subjects:
+  - kind: ServiceAccount
+    name: nfs-csi-provisioner
+    namespace: nfs-csi
+roleRef:
+  kind: ClusterRole
+  name: nfs-csi-provisioner-runner
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-csi-provisioner
+  namespace: nfs-csi
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-csi-provisioner
+  template:
+    metadata:
+      labels:
+        app: nfs-csi-provisioner
+    spec:
+      serviceAccountName: nfs-csi-provisioner
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: nfs-csi-provisioner
+          image: k8s.gcr.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+          args:
+            - "-provisioner=nfs.csi.k8s.io"
+            - "-nfs-server=192.168.56.31"
+            - "-nfs-path=/mnt/nfs-storage/k8s-pvcs"
+          volumeMounts:
+            - name: nfs-storage
+              mountPath: /mnt/nfs-storage
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+      volumes:
+        - name: nfs-storage
+          nfs:
+            server: 192.168.56.31
+            path: /mnt/nfs-storage/k8s-pvcs
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-csi
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: 192.168.56.31
+  share: /mnt/nfs-storage/k8s-pvcs
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

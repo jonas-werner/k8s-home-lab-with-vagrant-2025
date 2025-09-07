@@ -1,0 +1,35 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: practice-gateway
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: practice-web
+  namespace: default
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - practice-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /practice
+      route:
+        - destination:
+            host: practice-web
+            port:
+              number: 80

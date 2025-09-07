@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-dyn-writer
+spec:
+  containers:
+    - name: busybox
+      image: busybox:1.36
+      command: ["/bin/sh","-c"]
+      args:
+        - |
+          mkdir -p /data/out && \
+          echo "$(date -Iseconds) running on $(cat /etc/hostname)" > /data/out/host.txt && \
+          tail -f /dev/null
+      volumeMounts:
+        - name: vol
+          mountPath: /data
+  volumes:
+    - name: vol
+      persistentVolumeClaim:
+        claimName: nfs-dyn-pvc

@@ -1,0 +1,61 @@
+---
+# NFS Storage Class
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-storage
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: 192.168.56.31
+  share: /mnt/nfs-storage/k8s-pvcs
+  mountPermissions: "0755"
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+---
+# Example NFS PersistentVolume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-example
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 192.168.56.31
+    path: /mnt/nfs-storage/k8s-pvs/example
+---
+# Example NFS PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-example
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-storage
+---
+# Example Pod using NFS storage
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-test-pod
+spec:
+  containers:
+  - name: nfs-test
+    image: busybox
+    command: ["/bin/sh"]
+    args: ["-c", "while true; do echo 'Hello from NFS storage!' >> /mnt/nfs/test.txt; sleep 30; done"]
+    volumeMounts:
+    - name: nfs-volume
+      mountPath: /mnt/nfs
+  volumes:
+  - name: nfs-volume
+    persistentVolumeClaim:
+      claimName: nfs-pvc-example

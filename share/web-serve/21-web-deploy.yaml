@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: practice-web
+  labels:
+    app: practice-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: practice-web
+  template:
+    metadata:
+      labels:
+        app: practice-web
+    spec:
+
+      initContainers:
+        - name: preload-site
+          image: busybox:1.36
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              set -e
+              rm -rf /site/*
+
+              # copy practice tree
+              if [ -d /share/practice ]; then
+                mkdir -p /site/practice
+                cp -a /share/practice/. /site/practice/
+              else
+                echo "WARNING: /share/practice not found on host" >&2
+              fi
+
+              # optional root README (Docsify homepage)
+              if [ -f /share/README.md ]; then
+                cp -a /share/README.md /site/README.md
+              fi
+
+          volumeMounts:
+            - name: host-share
+              mountPath: /share
+              readOnly: true
+            - name: web-root
+              mountPath: /site
+
+      # ---------- Web container ----------
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            # serve the copied site (emptyDir), NOT the hostPath
+            - name: web-root
+              mountPath: /usr/share/nginx/html
+            # nginx vhost with SPA fallback + mime map include (from your 20- config)
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+            # Docsify shell
+            - name: docsify
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+            - name: docsify
+              mountPath: /usr/share/nginx/html/404.md
+              subPath: 404.md
+          readinessProbe:
+            httpGet:
+              path: /practice/
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+      # ---------- Volumes ----------
+      volumes:
+        # read-only view of the controller's repo for the init step only
+        - name: host-share
+          hostPath:
+            path: /home/vagrant/share
+            type: Directory
+        # pod-local site content (what nginx serves)
+        - name: web-root
+          emptyDir: {}
+        # configs you already have
+        - name: nginx-conf
+          configMap:
+            name: practice-web-nginx
+            items:
+              - key: default.conf
+                path: default.conf
+        - name: docsify
+          configMap:
+            name: practice-web-docsify
+            items:
+              - key: index.html
+                path: index.html
+              - key: 404.md
+                path: 404.md
+

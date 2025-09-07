@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-dyn-reader
+spec:
+  containers:
+    - name: busybox
+      image: busybox:1.36
+      command: ["/bin/sh","-c"]
+      args: ["tail -f /dev/null"]
+      volumeMounts:
+        - name: vol
+          mountPath: /data
+  volumes:
+    - name: vol
+      persistentVolumeClaim:
+        claimName: nfs-dyn-pvc

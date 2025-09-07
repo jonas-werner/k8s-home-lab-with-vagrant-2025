@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-static-pv
+  labels:
+    type: nfs
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  # No storageClassName → acts as a "classless" PV for static binding
+  nfs:
+    server: 192.168.56.11    # <-- CHANGE: your NFS server
+    path: /srv/nfs/static-pv1 # <-- CHANGE: exported path exists & is writable
