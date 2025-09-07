@@ -97,6 +97,7 @@ The lab uses VirtualBox's default network configuration:
 - Controller: 192.168.56.11
 - Workers: 192.168.56.21, 192.168.56.22, etc.
 - NFS Server: 192.168.56.31
+- MetalLB DHCP: 192.168.56.60-192.168.56.80
 
 ### Node Configuration
 
