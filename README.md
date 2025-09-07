@@ -32,19 +32,33 @@ cd k8s-home-lab-with-vagrant-2025
 vi share/config/config.env
 ```
 
-3. Deploy the cluster:
+3. Update the VMs to use your private SSH key (optional - vagrant ssh is still available):
+```bash
+# Edit line 122 of the Vagrantfile to add the location of your public SSH key
+vi Vagrantfile
+```
+
+4. Deploy the cluster:
 ```bash
 ./deploy.sh
 ```
 
+5. Access the tutorial web interface (only storage included at this point):
+These will be expanded over time to include more examples. 
 
-
-5. Access the tutorial web interface (still only storage included at this point):
 ```bash
 # Get the load balancer IP
 kubectl get svc istio-ingressgateway -n istio-system
-
+168
 # Access tutorials at http://<LB-IP>/practice/
+
+# Example:
+vagrant@k8s-controller-1:~$ kubectl get svc istio-ingressgateway -n istio-system
+NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                                      AGE
+istio-ingressgateway   LoadBalancer   10.108.178.153   192.168.56.60   15021:31920/TCP,80:30434/TCP,443:30985/TCP   26h
+
+# In the above case the tutorials can be accessed on http://192.168.56.60/practice/
+
 ```
 
 ## Configuration

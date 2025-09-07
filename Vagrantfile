@@ -117,6 +117,7 @@ EOF
 sysctl --system
 
 echo "-------------------------------------------------------------------------- Install SSH keys"
+# Update with your own public key plz :)
 mkdir -p /home/vagrant/.ssh
 wget -qO- https://raw.githubusercontent.com/jonas-werner/pubkeys/master/nopass.pub >> /home/vagrant/.ssh/authorized_keys
 chown -R vagrant:vagrant /home/vagrant/.ssh
