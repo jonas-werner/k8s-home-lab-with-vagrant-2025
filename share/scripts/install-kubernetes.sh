@@ -1,4 +1,4 @@
-fine#!/bin/bash
+#!/bin/bash
 
 # ============================================================================
 # Kubernetes Installation Script
