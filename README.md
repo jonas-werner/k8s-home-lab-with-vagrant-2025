@@ -44,6 +44,7 @@ vi Vagrantfile
 ```
 
 5. Access the tutorial web interface (only storage included at this point):
+
 These will be expanded over time to include more examples. 
 
 ```bash
