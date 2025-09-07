@@ -50,7 +50,7 @@ These will be expanded over time to include more examples.
 ```bash
 # Get the load balancer IP
 kubectl get svc istio-ingressgateway -n istio-system
-168
+
 # Access tutorials at http://<LB-IP>/practice/
 
 # Example:
