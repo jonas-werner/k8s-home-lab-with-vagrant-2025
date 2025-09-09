@@ -6,7 +6,7 @@ A complete Kubernetes home lab setup using Vagrant and VirtualBox, designed for 
 
 This project provides a fully automated Kubernetes cluster with:
 - Single controller node (k8s-controller-1)
-- Configurable worker nodes (default: 2 workers)
+- Configurable worker nodes (default: 1 worker, change as needed in "config.env")
 - NFS server for shared storage to practice PV and PVC with
 - Web-based tutorials and documentation (a work in progress)
 - Comprehensive component stack (Cilium, MetalLB, Istio, Helm)
@@ -15,7 +15,7 @@ This project provides a fully automated Kubernetes cluster with:
 
 - VirtualBox 7.0+
 - Vagrant
-- 10GB+ RAM available for VMs
+- 12GB+ RAM available for VMs if single worker is used
 - Internet connection for package downloads
 
 ## Quick Start
@@ -26,10 +26,14 @@ git clone https://github.com/jonas-werner/k8s-home-lab-with-vagrant-2025.git
 cd k8s-home-lab-with-vagrant-2025
 ```
 
-2. Configure components (optional):
+2. Configure the cluster (optional):
 ```bash
-# Edit share/config/config.env to enable/disable components
+# Edit share/config/config.env to configure cluster and components
 vi share/config/config.env
+
+# Key settings:
+# NUM_WORKERS=1          # Number of worker nodes (1-100+)
+# INSTALL_CILIUM=true    # Enable/disable components
 ```
 
 3. Update the VMs to use your private SSH key (optional - vagrant ssh is still available):
@@ -43,9 +47,7 @@ vi Vagrantfile
 ./deploy.sh
 ```
 
-5. Access the tutorial web interface (only storage included at this point):
-
-These will be expanded over time to include more examples. 
+5. Access the tutorial web interface (only storage included at this point - they will be expanded over time to include more examples):
 
 ```bash
 # Get the load balancer IP
@@ -115,44 +117,17 @@ The `deploy.sh` script provides several commands for managing your Kubernetes ho
   - **Warning**: This will delete all your work!
 - **Use when**: You want to start completely fresh or free up resources
 
-### Smart Deployment Features
-
-The deploy script includes several smart features:
-
-- **Incremental Updates**: Only installs components that aren't already present
-- **Worker Node Management**: Automatically handles multiple worker nodes
-- **Component Detection**: Checks if components are already installed before attempting installation
-- **Error Recovery**: Provides clear error messages and diagnostic information
-- **State Management**: Tracks what's been installed to avoid unnecessary work
-
-### Example Workflow
-
-```bash
-# First time setup
-./deploy.sh
-
-# Check what's running
-./deploy.sh status
-
-# Later, add more components by editing config and re-running
-vi share/config/config.env
-./deploy.sh
-
-# Check status again
-./deploy.sh status
-
-# If something goes wrong, reset and try again
-./deploy.sh reset
-./deploy.sh
-```
 
 ## Configuration
 
-### Component Configuration
+### Cluster and Component Configuration
 
-Edit `share/config/config.env` to enable/disable components:
+Edit `share/config/config.env` to configure the cluster and enable/disable components:
 
 ```bash
+# Cluster Configuration
+NUM_WORKERS=1              # Number of worker nodes (1-100+)
+
 # Core Kubernetes Components
 INSTALL_KUBERNETES=true
 INSTALL_CILIUM=true
@@ -188,12 +163,13 @@ The lab uses VirtualBox's default network configuration:
 
 ### Node Configuration
 
-Edit `Vagrantfile` to configure the number of nodes:
+The cluster configuration is managed through `share/config/config.env`:
 
-```ruby
-$num_controllers = 1  # Single controller node (will break if changed)
-$num_workers = 1      # Configurable number of worker nodes (change as required)
-```
+- **Controller nodes**: Always 1 (hardcoded, cannot be changed)
+- **Worker nodes**: Configurable via `NUM_WORKERS` in `config.env` (1-100+)
+- **NFS server**: Always 1 (for shared storage)
+
+Both `Vagrantfile` and `deploy.sh` automatically read the worker count from `config.env`, ensuring consistency.
 
 ### Ubuntu Mirror Configuration
 
@@ -276,23 +252,7 @@ vagrant up k8s-controller-1
 vagrant destroy
 ```
 
-### Useful Commands
 
-```bash
-# Check cluster status
-kubectl get nodes
-kubectl get pods --all-namespaces
-
-# Check storage
-kubectl get pv,pvc,storageclass
-
-# Check networking
-kubectl get svc --all-namespaces
-kubectl get ingress --all-namespaces
-
-# Check Istio
-kubectl get pods -n istio-system
-```
 
 ## File Structure
 

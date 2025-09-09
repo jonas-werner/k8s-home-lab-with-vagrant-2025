@@ -14,9 +14,6 @@
 
 set -e  # Exit on any error
 
-# Configuration - should match Vagrantfile
-num_workers=2  # Number of worker nodes
-
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -24,7 +21,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;94m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
-
 
 # Function to print colored output
 print_status() {
@@ -38,6 +34,23 @@ print_warning() {
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
+
+# Load configuration from config.env file
+if [ -f "share/config/config.env" ]; then
+    print_status "Loading configuration from share/config/config.env..."
+    source share/config/config.env
+else
+    print_error "share/config/config.env not found! Please create the configuration file first."
+    exit 1
+fi
+
+# Set num_workers from config
+num_workers=$NUM_WORKERS
+if [ -z "$num_workers" ]; then
+    print_error "NUM_WORKERS not set in config.env"
+    exit 1
+fi
+print_status "Detected $num_workers worker nodes from config.env"
 
 print_header() {
     echo -e "${BLUE}============================================================================${NC}"
@@ -153,6 +166,36 @@ check_vms_running() {
     fi
 }
 
+# Function to check if the correct number of worker VMs exist
+check_worker_vms_count() {
+    local expected_workers=$1
+    local actual_workers
+    
+    # Count running worker VMs
+    actual_workers=$(vagrant status | grep "k8s-worker-" | grep "running" | wc -l)
+    
+    if [ "$actual_workers" -eq "$expected_workers" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to check if we need to scale up workers
+needs_worker_scale_up() {
+    local expected_workers=$1
+    local actual_workers
+    
+    # Count running worker VMs
+    actual_workers=$(vagrant status | grep "k8s-worker-" | grep "running" | wc -l)
+    
+    if [ "$actual_workers" -lt "$expected_workers" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Function to check if cluster is ready
 check_cluster_ready() {
     if vagrant ssh k8s-controller-1 -- kubectl get nodes --no-headers 2>/dev/null | grep -q "control-plane"; then
@@ -192,15 +235,6 @@ is_worker_joined() {
     joined_workers=$(get_joined_workers)
     echo "$joined_workers" | grep -q "^$worker_num$"
 }
-
-# Load configuration from config.env file
-if [ -f "share/config/config.env" ]; then
-    print_status "Loading configuration from share/config/config.env..."
-    source share/config/config.env
-else
-    print_error "share/config/config.env not found! Please create the configuration file first."
-    exit 1
-fi
 
 # Function to get status with color
 get_status() {
@@ -599,7 +633,19 @@ main() {
                         print_status "Some components are missing"
                     fi
                 else
-                    print_status "Worker nodes are not joined"
+                    # Check if it's a worker count mismatch or no workers joined
+                    local actual_workers
+                    local joined_workers
+                    actual_workers=$(vagrant status | grep "k8s-worker-" | grep "running" | wc -l)
+                    joined_workers=$(vagrant ssh k8s-controller-1 -- kubectl get nodes --no-headers 2>/dev/null | grep "k8s-worker" | wc -l)
+                    
+                    if [ "$actual_workers" -ne "$num_workers" ]; then
+                        print_status "Worker node count change detected (configured: $num_workers, running: $actual_workers)"
+                    elif [ "$joined_workers" -ne "$num_workers" ]; then
+                        print_status "Worker node count change detected (configured: $num_workers, joined: $joined_workers)"
+                    else
+                        print_status "Worker nodes are not joined"
+                    fi
                 fi
             else
                 print_status "Kubernetes cluster is not ready"
@@ -614,7 +660,7 @@ main() {
     # Confirm installation
     confirm_installation
     
-    # Step 1: Deploy VMs if not already running
+    # Step 1: Deploy VMs if not already running or if worker count changed
     if ! check_vms_running; then
         print_status "Step 1: Deploying VMs and installing components..."
         if vagrant up; then
@@ -623,8 +669,26 @@ main() {
             print_error "Failed to deploy VMs"
             exit 1
         fi
+    elif needs_worker_scale_up $num_workers; then
+        print_status "Step 1: Worker count increased, updating VMs..."
+        local actual_workers
+        actual_workers=$(vagrant status | grep "k8s-worker-" | grep "running" | wc -l)
+        print_status "Expected $num_workers workers, but found $actual_workers"
+        if vagrant up; then
+            print_status "VMs updated successfully!"
+        else
+            print_error "Failed to update VMs"
+            exit 1
+        fi
+    elif ! check_worker_vms_count $num_workers; then
+        local actual_workers
+        actual_workers=$(vagrant status | grep "k8s-worker-" | grep "running" | wc -l)
+        print_warning "Step 1: Worker count decreased from $actual_workers to $num_workers"
+        print_warning "Extra worker VMs are still running but won't be used by Kubernetes"
+        print_warning "To remove them, manually run: vagrant destroy k8s-worker-X (where X > $num_workers)"
+        print_status "Step 1: VMs already deployed, continuing with current configuration..."
     else
-        print_status "Step 1: VMs already deployed, skipping..."
+        print_status "Step 1: VMs already deployed with correct worker count, skipping..."
     fi
     
     # Step 2: Install Kubernetes on controller

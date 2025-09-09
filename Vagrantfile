@@ -18,9 +18,18 @@ Vagrant.configure("2") do |config|
    vb.customize [ "guestproperty", "set", :id, "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 1000 ]
   end
 
+  # Load configuration from config.env
+  config_file = File.join(File.dirname(__FILE__), 'share', 'config', 'config.env')
+  if File.exist?(config_file)
+    config_content = File.read(config_file)
+    num_workers_match = config_content.match(/NUM_WORKERS=(\d+)/)
+    $num_workers = num_workers_match ? num_workers_match[1].to_i : 1
+  else
+    $num_workers = 1  # Default fallback
+  end
+  
   # Configuration for different node types
   $num_controllers = 1  # Single controller node (will break if changed)
-  $num_workers = 2      # Configurable number of worker nodes (change as required)
   $total_nodes = $num_controllers + $num_workers
   
   # Ubuntu mirror configuration

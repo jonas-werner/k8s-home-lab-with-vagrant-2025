@@ -37,4 +37,4 @@ swapoff -a
 sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 # Join the cluster
-kubeadm join 192.168.56.11:6443 --token e23ig9.36bfy27ov4hsmvw2 --discovery-token-ca-cert-hash sha256:2e6f5dd094fae95b555d330f6407cea65fd20e09a37695f0fe518f7f52ceb2f7 
+kubeadm join 192.168.56.11:6443 --token sr85tf.i7wyknmwlssqtdfl --discovery-token-ca-cert-hash sha256:78bd6d5999e51791c73aef326b439ebb5b9d4b9f7ed4e5c54d4828ff6c8283b1 
