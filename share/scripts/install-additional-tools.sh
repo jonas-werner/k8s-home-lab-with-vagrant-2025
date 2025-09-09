@@ -6,7 +6,8 @@
 # This script installs additional useful tools for Kubernetes management
 # ============================================================================
 
-set -e
+# Don't exit on error for individual tool installations
+# set -e
 
 # Color codes for output
 RED='\033[0;31m'
@@ -32,31 +33,59 @@ print_status "Installing additional tools..."
 # Install kubectx and kubens
 print_status "Installing kubectx and kubens..."
 if ! command -v kubectx &> /dev/null; then
-    git clone https://github.com/ahmetb/kubectx /opt/kubectx
-    ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx
-    ln -sf /opt/kubectx/kubens /usr/local/bin/kubens
-    chmod +x /usr/local/bin/kubectx /usr/local/bin/kubens
+    if git clone https://github.com/ahmetb/kubectx /opt/kubectx; then
+        ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx
+        ln -sf /opt/kubectx/kubens /usr/local/bin/kubens
+        chmod +x /usr/local/bin/kubectx /usr/local/bin/kubens
+        print_status "kubectx and kubens installed successfully"
+    else
+        print_warning "Failed to install kubectx and kubens, skipping..."
+    fi
 fi
 
 # Install kubectl-tree
 print_status "Installing kubectl-tree..."
 if ! command -v kubectl-tree &> /dev/null; then
-    curl -L https://github.com/ahmetb/kubectl-tree/releases/latest/download/kubectl-tree_linux_amd64.tar.gz | tar -xz -C /usr/local/bin
-    chmod +x /usr/local/bin/kubectl-tree
+    # Get the latest release URL
+    LATEST_URL=$(curl -s https://api.github.com/repos/ahmetb/kubectl-tree/releases/latest | grep "browser_download_url.*linux_amd64.tar.gz" | cut -d '"' -f 4)
+    if [ -n "$LATEST_URL" ]; then
+        if curl -L "$LATEST_URL" | tar -xz -C /usr/local/bin; then
+            chmod +x /usr/local/bin/kubectl-tree
+            print_status "kubectl-tree installed successfully"
+        else
+            print_warning "Failed to install kubectl-tree, skipping..."
+        fi
+    else
+        print_warning "Could not find kubectl-tree release, skipping..."
+    fi
 fi
 
 # Install k9s
 print_status "Installing k9s..."
 if ! command -v k9s &> /dev/null; then
-    curl -sS https://webinstall.dev/k9s | bash
-    ln -sf ~/.local/bin/k9s /usr/local/bin/k9s
+    if curl -sS https://webinstall.dev/k9s | bash; then
+        ln -sf ~/.local/bin/k9s /usr/local/bin/k9s
+        print_status "k9s installed successfully"
+    else
+        print_warning "Failed to install k9s, skipping..."
+    fi
 fi
 
 # Install kubectl-neat
 print_status "Installing kubectl-neat..."
 if ! command -v kubectl-neat &> /dev/null; then
-    curl -L https://github.com/itaysk/kubectl-neat/releases/latest/download/kubectl-neat_linux_amd64.tar.gz | tar -xz -C /usr/local/bin
-    chmod +x /usr/local/bin/kubectl-neat
+    # Get the latest release URL
+    LATEST_URL=$(curl -s https://api.github.com/repos/itaysk/kubectl-neat/releases/latest | grep "browser_download_url.*linux_amd64.tar.gz" | cut -d '"' -f 4)
+    if [ -n "$LATEST_URL" ]; then
+        if curl -L "$LATEST_URL" | tar -xz -C /usr/local/bin; then
+            chmod +x /usr/local/bin/kubectl-neat
+            print_status "kubectl-neat installed successfully"
+        else
+            print_warning "Failed to install kubectl-neat, skipping..."
+        fi
+    else
+        print_warning "Could not find kubectl-neat release, skipping..."
+    fi
 fi
 
 print_status "Additional tools installation completed successfully!"

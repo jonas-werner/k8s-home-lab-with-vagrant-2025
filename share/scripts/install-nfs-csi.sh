@@ -49,16 +49,56 @@ fi
 
 # Install NFS client tools on all nodes
 print_status "Installing NFS client tools on all nodes..."
-for node in $(kubectl get nodes -o name | cut -d'/' -f2); do
-    print_status "Installing NFS client on node: $node"
-    kubectl debug node/$node -it --image=busybox -- chroot /host bash -c "
-        apt-get update && 
-        apt-get install -y nfs-common &&
-        mkdir -p /mnt/nfs-storage &&
-        echo '192.168.56.31:/mnt/nfs-storage/k8s-pvcs /mnt/nfs-storage nfs defaults 0 0' >> /etc/fstab &&
-        mount -a
-    "
-done
+
+# Create a temporary DaemonSet to install NFS client on all nodes
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nfs-client-installer
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      name: nfs-client-installer
+  template:
+    metadata:
+      labels:
+        name: nfs-client-installer
+    spec:
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: installer
+        image: busybox
+        command: ["chroot", "/host", "bash", "-c"]
+        args:
+        - |
+          apt-get update && 
+          apt-get install -y nfs-common && 
+          mkdir -p /mnt/nfs-storage && 
+          echo '192.168.56.31:/mnt/nfs-storage/k8s-pvcs /mnt/nfs-storage nfs defaults 0 0' >> /etc/fstab && 
+          mount -a
+        volumeMounts:
+        - name: host-root
+          mountPath: /host
+        securityContext:
+          privileged: true
+      volumes:
+      - name: host-root
+        hostPath:
+          path: /
+      tolerations:
+      - operator: Exists
+EOF
+
+# Wait for the DaemonSet to complete
+print_status "Waiting for NFS client installation to complete..."
+kubectl wait --for=condition=ready pod -l name=nfs-client-installer --timeout=300s
+
+# Clean up the DaemonSet
+print_status "Cleaning up temporary installer pods..."
+kubectl delete daemonset nfs-client-installer
 
 # Install NFS CSI driver using Helm
 print_status "Installing NFS CSI driver using Helm..."

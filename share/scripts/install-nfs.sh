@@ -31,6 +31,16 @@ print_status "Installing NFS server..."
 
 # Install NFS server
 print_status "Installing NFS packages..."
+
+# Ensure we're using the standard Ubuntu repositories for NFS packages
+print_status "Updating package sources for NFS packages..."
+cat > /etc/apt/sources.list <<EOF
+deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
+EOF
+
 apt-get update
 apt-get install -y nfs-kernel-server nfs-common
 

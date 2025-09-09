@@ -6,7 +6,7 @@ A complete Kubernetes home lab setup using Vagrant and VirtualBox, designed for 
 
 This project provides a fully automated Kubernetes cluster with:
 - Single controller node (k8s-controller-1)
-- Configurable worker nodes (default: 1 worker)
+- Configurable worker nodes (default: 2 workers)
 - NFS server for shared storage to practice PV and PVC with
 - Web-based tutorials and documentation (a work in progress)
 - Comprehensive component stack (Cilium, MetalLB, Istio, Helm)
@@ -62,6 +62,90 @@ istio-ingressgateway   LoadBalancer   10.108.178.153   192.168.56.60   15021:319
 
 ```
 
+## Deploy Script Commands
+
+The `deploy.sh` script provides several commands for managing your Kubernetes home lab:
+
+### Basic Usage
+
+```bash
+# Deploy/update the entire cluster and components
+./deploy.sh
+
+# Check current deployment status
+./deploy.sh status
+
+# Reset deployment state (allows re-running from scratch)
+./deploy.sh reset
+
+# Destroy all VMs and clean up
+./deploy.sh destroy
+```
+
+### Command Details
+
+#### `./deploy.sh` (default)
+- **Purpose**: Deploy or update the entire Kubernetes cluster and components
+- **Behavior**: 
+  - Creates VMs if they don't exist
+  - Installs Kubernetes on controller and joins worker nodes
+  - Installs all enabled components (Cilium, MetalLB, Istio, etc.)
+  - Deploys the practice web interface
+  - Skips already-installed components automatically
+- **Use when**: First deployment or when you want to ensure everything is up to date
+
+#### `./deploy.sh status`
+- **Purpose**: Check the current status of your deployment
+- **Shows**:
+  - Configuration table with enabled/disabled components
+  - Current cluster status (nodes, pods)
+  - Which components are installed vs. missing
+- **Use when**: You want to see what's currently running without making changes
+
+#### `./deploy.sh reset`
+- **Purpose**: Reset the deployment state to allow fresh installation
+- **Behavior**: Removes state files that track installation progress
+- **Use when**: You want to force reinstallation of all components
+
+#### `./deploy.sh destroy`
+- **Purpose**: Completely destroy all VMs and clean up
+- **Behavior**: 
+  - Destroys all VMs using `vagrant destroy -f`
+  - Removes state files
+  - **Warning**: This will delete all your work!
+- **Use when**: You want to start completely fresh or free up resources
+
+### Smart Deployment Features
+
+The deploy script includes several smart features:
+
+- **Incremental Updates**: Only installs components that aren't already present
+- **Worker Node Management**: Automatically handles multiple worker nodes
+- **Component Detection**: Checks if components are already installed before attempting installation
+- **Error Recovery**: Provides clear error messages and diagnostic information
+- **State Management**: Tracks what's been installed to avoid unnecessary work
+
+### Example Workflow
+
+```bash
+# First time setup
+./deploy.sh
+
+# Check what's running
+./deploy.sh status
+
+# Later, add more components by editing config and re-running
+vi share/config/config.env
+./deploy.sh
+
+# Check status again
+./deploy.sh status
+
+# If something goes wrong, reset and try again
+./deploy.sh reset
+./deploy.sh
+```
+
 ## Configuration
 
 ### Component Configuration
@@ -88,6 +172,9 @@ INSTALL_ISTIO=true
 
 # Additional Tools
 INSTALL_ADDITIONAL_TOOLS=true
+
+# Practice Web Interface
+INSTALL_PRACTICE_WEB=true
 ```
 
 ### Network Configuration
@@ -142,6 +229,7 @@ $ubuntu_mirror = "http://ftp.riken.jp/Linux/ubuntu/"  # Japan Riken (default)
 - **Helm**: Package manager
 - **Istio**: Service mesh with observability
 - **Additional Tools**: kubectx, kubens, kubectl-tree
+- **Practice Web Interface**: Docsify-based tutorial website
 
 ## Web Interface
 

@@ -20,7 +20,7 @@ Vagrant.configure("2") do |config|
 
   # Configuration for different node types
   $num_controllers = 1  # Single controller node (will break if changed)
-  $num_workers = 1      # Configurable number of worker nodes (change as required)
+  $num_workers = 2      # Configurable number of worker nodes (change as required)
   $total_nodes = $num_controllers + $num_workers
   
   # Ubuntu mirror configuration
@@ -87,7 +87,7 @@ cat > /etc/apt/sources.list <<EOF
 deb #{$ubuntu_mirror} jammy main restricted universe multiverse
 deb #{$ubuntu_mirror} jammy-updates main restricted universe multiverse
 deb #{$ubuntu_mirror} jammy-backports main restricted universe multiverse
-deb #{$ubuntu_mirror} jammy-security main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
 EOF
 
 echo "-------------------------------------------------------------------------- Update DNS settings"
@@ -122,12 +122,8 @@ mkdir -p /home/vagrant/.ssh
 wget -qO- https://raw.githubusercontent.com/jonas-werner/pubkeys/master/nopass.pub >> /home/vagrant/.ssh/authorized_keys
 chown -R vagrant:vagrant /home/vagrant/.ssh
 
-echo "-------------------------------------------------------------------------- Run Kubernetes installation"
-# Run Kubernetes installation on controller
-bash /home/vagrant/share/scripts/install-kubernetes.sh
-
 echo "-------------------------------------------------------------------------- Basic OS setup complete"
-echo "Kubernetes installation completed"
+echo "Kubernetes installation will be done during deployment"
 
       SHELL
     end
@@ -182,7 +178,7 @@ cat > /etc/apt/sources.list <<EOF
 deb #{$ubuntu_mirror} jammy main restricted universe multiverse
 deb #{$ubuntu_mirror} jammy-updates main restricted universe multiverse
 deb #{$ubuntu_mirror} jammy-backports main restricted universe multiverse
-deb #{$ubuntu_mirror} jammy-security main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
 EOF
 
 echo "-------------------------------------------------------------------------- Update DNS settings"
@@ -270,7 +266,7 @@ cat > /etc/apt/sources.list <<EOF
 deb #{$ubuntu_mirror} jammy main restricted universe multiverse
 deb #{$ubuntu_mirror} jammy-updates main restricted universe multiverse
 deb #{$ubuntu_mirror} jammy-backports main restricted universe multiverse
-deb #{$ubuntu_mirror} jammy-security main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
 EOF
 
 echo "-------------------------------------------------------------------------- Update DNS settings"
@@ -284,7 +280,7 @@ chown -R vagrant:vagrant /home/vagrant/.ssh
 
 echo "-------------------------------------------------------------------------- Run NFS installation"
 # Run NFS installation on server
-bash /home/vagrant/share/scripts/install-nfs.sh
+sudo bash /home/vagrant/share/scripts/install-nfs.sh
 
 echo "-------------------------------------------------------------------------- Basic OS setup complete"
 echo "NFS installation completed"
